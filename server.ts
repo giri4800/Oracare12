@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { fileTypeFromBuffer } from 'file-type';
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
 
 // Load environment variables
 dotenv.config();
@@ -14,14 +16,44 @@ if (!process.env.ANTHROPIC_API_KEY) {
 }
 
 const app = express();
-const port = process.env.PORT || 4000;
+const port = parseInt(process.env.PORT || '4000', 10);
 
 // Debug logs
 console.log('Server initialization:');
 console.log('- Port:', port);
 console.log('- API Key:', process.env.ANTHROPIC_API_KEY ? '✓ Present' : '✗ Missing');
 
-app.use(cors());
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',  // Default Vite port
+  'http://localhost:5177',  // Current frontend port
+  'http://192.168.29.86:5177', // Network access
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
 app.use(express.json({ limit: '50mb' }));
 
 const anthropic = new Anthropic({

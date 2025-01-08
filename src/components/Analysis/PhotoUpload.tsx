@@ -1,412 +1,395 @@
-import React, { useRef, useState } from 'react';
-import { Camera, Upload, Loader2, Search, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, Upload, Loader2, Search, RefreshCw, X } from 'lucide-react';
 import { analyzeImage } from '../../services/analysisService';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
-import { processImage, type HistopathologicalData } from '../../utils/imageProcessing';
+import { usePatientStore } from '../../stores/usePatientStore';
+import { processImage, validateImage, SUPPORTED_IMAGE_FORMATS, type HistopathologicalData } from '../../utils/imageProcessing';
 import type { AnalysisResponse } from '../../services/analysisService';
+import CameraCapture from './CameraCapture';
 
 const PhotoUpload = () => {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createAnalysis } = useAnalysisStore();
-  const [formData, setFormData] = useState<HistopathologicalData>({
-    age: '',
-    tobacco: 'No',
-    smoking: 'No',
-    panMasala: 'No',
-    symptomDuration: '',
-    painLevel: 'None',
-    difficultySwallowing: 'No',
-    weightLoss: 'No',
-    familyHistory: 'No',
-    immuneCompromised: 'No',
-    persistentSoreThroat: 'No',
-    voiceChanges: 'No',
-    lumpsInNeck: 'No',
-    frequentMouthSores: 'No',
-    poorDentalHygiene: 'No',
-  });
+  const { getPatientById } = usePatientStore();
+  const [patientId, setPatientId] = useState('');
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processAndSetImage = async (file: File) => {
     try {
-      const base64Data = await processImage(file);
-      setPreview(`data:${file.type};base64,${base64Data}`);
+      validateImage(file);
+      const reader = new FileReader();
+      
+      const imageData = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const result = reader.result;
+          if (typeof result === 'string') {
+            resolve(result);
+          } else {
+            reject(new Error('Failed to read image file'));
+          }
+        };
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.readAsDataURL(file);
+      });
+
+      console.log('Image data length:', imageData.length);
+      setPreview(imageData);
       setError(null);
     } catch (err) {
-      setError('Failed to process image. Please try again.');
-      console.error('File processing error:', err);
+      console.error('Image processing error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process image');
+      setPreview(null);
     }
   };
 
-  const handleFormChange = (field: keyof HistopathologicalData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File change detected'); // Debug log
+    const file = e.target.files?.[0];
+    if (file) {
+      processAndSetImage(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    console.log('File dropped'); // Debug log
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processAndSetImage(file);
+    }
   };
 
   const handleAnalyze = async () => {
-    if (!preview) {
-      setError('Please upload an image first');
+    if (!preview || !patientId) {
+      setError('Please upload an image and enter a patient ID');
       return;
     }
 
-    if (!formData.age || !formData.symptomDuration) {
-      setError('Please fill in all required fields');
-      return;
-    }
-    
     setLoading(true);
     setError(null);
-    setAnalysisResult(null);
-    
+
     try {
-      const base64Data = preview.split(',')[1];
-      const result = await analyzeImage(base64Data, formData);
+      // Get patient data
+      const patient = await getPatientById(patientId);
+      if (!patient) {
+        throw new Error('Patient not found');
+      }
+
+      console.log('Found patient:', patient); // Add debug log
+
+      // Convert patient data to histopathological data
+      const histopathologicalData: HistopathologicalData = {
+        patientId: patient.patient_id,
+        age: patient.age?.toString() || '0',
+        tobacco: patient.tobacco || 'No',
+        smoking: patient.smoking || 'No',
+        pan_masala: patient.pan_masala || 'No',
+        symptom_duration: patient.symptom_duration || '',
+        painLevel: patient.pain_level || 'None',
+        difficultySwallowing: patient.difficulty_swallowing || 'No',
+        weightLoss: patient.weight_loss || 'No',
+        familyHistory: patient.family_history || 'No',
+        immuneCompromised: patient.immune_compromised || 'No',
+        persistentSoreThroat: patient.persistent_sore_throat || 'No',
+        voiceChanges: patient.voice_changes || 'No',
+        lumpsInNeck: patient.lumps_in_neck || 'No',
+        frequentMouthSores: patient.frequent_mouth_sores || 'No',
+        poorDentalHygiene: patient.poor_dental_hygiene || 'No'
+      };
+
+      // Analyze image
+      const result = await analyzeImage(preview, histopathologicalData);
+      console.log('Analysis result:', result);
+
+      // Store analysis result
+      try {
+        const analysisToSave = {
+          patientId: patient.patient_id, // Ensure we're using patient_id
+          user_id: patient.user_id, // Add user_id from patient
+          image_url: preview,
+          result: {
+            risk: result.risk || 'low',
+            confidence: result.confidence || 0.95,
+            analysis: result.analysis || 'Analysis completed successfully',
+            findings: Array.isArray(result.findings) ? result.findings : [],
+            recommendations: Array.isArray(result.recommendations) ? result.recommendations : [
+              'Maintain regular oral hygiene practices',
+              'Continue routine dental check-ups'
+            ],
+            scanId: result.scanId || crypto.randomUUID(),
+            analysisLength: result.analysisLength || 0,
+            rawAnalysis: result.rawAnalysis || ''
+          },
+          status: 'completed',
+          created_at: new Date().toISOString()
+        };
+
+        console.log('Saving analysis with patient ID:', analysisToSave.patientId); // Add debug log
+        await createAnalysis(analysisToSave);
+        console.log('Analysis saved successfully');
+      } catch (saveError) {
+        console.error('Failed to save analysis:', saveError);
+        throw saveError;
+      }
+
       setAnalysisResult(result);
-      await createAnalysis(preview, result);
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');
       console.error('Analysis failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze image');
     } finally {
       setLoading(false);
     }
   };
 
   const handleReset = () => {
+    console.log('Resetting form'); // Debug log
     setPreview(null);
     setAnalysisResult(null);
     setError(null);
-    setFormData({
-      age: '',
-      tobacco: 'No',
-      smoking: 'No',
-      panMasala: 'No',
-      symptomDuration: '',
-      painLevel: 'None',
-      difficultySwallowing: 'No',
-      weightLoss: 'No',
-      familyHistory: 'No',
-      immuneCompromised: 'No',
-      persistentSoreThroat: 'No',
-      voiceChanges: 'No',
-      lumpsInNeck: 'No',
-      frequentMouthSores: 'No',
-      poorDentalHygiene: 'No',
-    });
+    setPatientId('');
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCameraCapture = (imageData: string) => {
+    console.log('Camera capture received'); // Debug log
+    setPreview(imageData);
+    setShowCamera(false);
   };
 
   return (
-    <div className="space-y-8 p-6 max-w-4xl mx-auto bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-xl shadow-xl">
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/50 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg shadow-sm">
-          {error}
-        </div>
-      )}
-
-      <div className="flex flex-col items-center space-y-6">
-        {preview ? (
-          <div className="relative group">
-            <img 
-              src={preview} 
-              alt="Preview" 
-              className="max-w-2xl w-full rounded-lg shadow-2xl transition-transform duration-300 group-hover:scale-[1.02]" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-          </div>
-        ) : (
-          <div className="w-full max-w-2xl h-64 border-3 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center transition-colors duration-300 hover:border-blue-400 dark:hover:border-blue-500">
-            <div className="text-center space-y-2">
-              <Upload size={40} className="mx-auto text-gray-400 dark:text-gray-500" />
-              <p className="text-gray-600 dark:text-gray-300">Upload or capture an image</p>
-            </div>
-          </div>
-        )}
-        
-        <div className="flex flex-wrap gap-4 justify-center">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            <Upload size={20} className="animate-bounce" />
-            <span>Upload Image</span>
-          </button>
-          
-          <button
-            onClick={handleAnalyze}
-            disabled={loading || !preview}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={20} className="animate-spin" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Search size={20} />
-                <span>Analyze Image</span>
-              </>
-            )}
-          </button>
-
-          {(preview || analysisResult) && (
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              <RefreshCw size={20} />
-              <span>Reset</span>
-            </button>
-          )}
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            className="hidden"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Patient Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Age*</label>
-            <input
-              type="text"
-              value={formData.age}
-              onChange={(e) => handleFormChange('age', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Symptom Duration*</label>
-            <input
-              type="text"
-              value={formData.symptomDuration}
-              onChange={(e) => handleFormChange('symptomDuration', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              placeholder="e.g., 2 weeks"
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tobacco Use</label>
-            <select
-              value={formData.tobacco}
-              onChange={(e) => handleFormChange('tobacco', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-              <option value="Former">Former</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Smoking</label>
-            <select
-              value={formData.smoking}
-              onChange={(e) => handleFormChange('smoking', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-              <option value="Former">Former</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Pain Level</label>
-            <select
-              value={formData.painLevel}
-              onChange={(e) => handleFormChange('painLevel', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="None">None</option>
-              <option value="Mild">Mild</option>
-              <option value="Moderate">Moderate</option>
-              <option value="Severe">Severe</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Difficulty Swallowing</label>
-            <select
-              value={formData.difficultySwallowing}
-              onChange={(e) => handleFormChange('difficultySwallowing', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Weight Loss</label>
-            <select
-              value={formData.weightLoss}
-              onChange={(e) => handleFormChange('weightLoss', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Family History</label>
-            <select
-              value={formData.familyHistory}
-              onChange={(e) => handleFormChange('familyHistory', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Immune Compromised</label>
-            <select
-              value={formData.immuneCompromised}
-              onChange={(e) => handleFormChange('immuneCompromised', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Persistent Sore Throat</label>
-            <select
-              value={formData.persistentSoreThroat}
-              onChange={(e) => handleFormChange('persistentSoreThroat', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Voice Changes</label>
-            <select
-              value={formData.voiceChanges}
-              onChange={(e) => handleFormChange('voiceChanges', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lumps in Neck</label>
-            <select
-              value={formData.lumpsInNeck}
-              onChange={(e) => handleFormChange('lumpsInNeck', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Frequent Mouth Sores</label>
-            <select
-              value={formData.frequentMouthSores}
-              onChange={(e) => handleFormChange('frequentMouthSores', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Poor Dental Hygiene</label>
-            <select
-              value={formData.poorDentalHygiene}
-              onChange={(e) => handleFormChange('poorDentalHygiene', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent transition-colors duration-200"
-              disabled={loading}
-            >
-              <option value="No">No</option>
-              <option value="Yes">Yes</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {analysisResult && (
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg space-y-6 transform transition-all duration-500 hover:shadow-2xl">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Analysis Results</h3>
-          <div className="space-y-6">
-            <div className="flex items-center gap-3">
-              <span className="font-medium text-gray-700 dark:text-gray-300">Risk Level:</span>
-              <span className={`px-4 py-1.5 rounded-full text-white font-medium ${
-                analysisResult.risk === 'high' ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                analysisResult.risk === 'medium' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-                'bg-gradient-to-r from-green-500 to-green-600'
-              }`}>
-                {analysisResult.risk.charAt(0).toUpperCase() + analysisResult.risk.slice(1)}
-              </span>
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Upload and Controls */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Image Analysis
+            </h2>
+            
+            {/* Patient ID Input */}
             <div>
-              <span className="font-medium text-gray-700 dark:text-gray-300">Analysis:</span>
-              <p className="mt-2 text-gray-600 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
-                {analysisResult.analysis}
-              </p>
+              <label htmlFor="patientId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Patient ID
+              </label>
+              <input
+                type="text"
+                id="patientId"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-medical-primary-500 focus:ring-medical-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                placeholder="Enter patient ID"
+              />
             </div>
-            <div className="flex items-center gap-3">
-              <span className="font-medium text-gray-700 dark:text-gray-300">Confidence:</span>
-              <div className="flex-1 max-w-xs">
-                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                    style={{ width: `${(analysisResult.confidence * 100).toFixed(1)}%` }}
-                  ></div>
+
+            {/* Upload Area */}
+            {!preview && (
+              <div
+                className="border-2 border-dashed rounded-lg p-8 text-center space-y-4 hover:border-medical-primary-500 dark:hover:border-medical-primary-400 transition-colors cursor-pointer bg-gray-50 dark:bg-gray-700"
+                onDragOver={(e) => e.preventDefault()}
+                onDragLeave={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="flex flex-col items-center">
+                  <Upload className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="file-upload"
+                      className="text-medical-primary-600 dark:text-medical-primary-400 hover:text-medical-primary-500 cursor-pointer"
+                    >
+                      <span>Upload an image</span>
+                      <input
+                        id="file-upload"
+                        name="file-upload"
+                        type="file"
+                        className="sr-only"
+                        accept={SUPPORTED_IMAGE_FORMATS.join(', ')}
+                        onChange={handleFileChange}
+                        ref={fileInputRef}
+                      />
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      or drag and drop here
+                    </p>
+                  </div>
                 </div>
               </div>
-              <span className="text-gray-600 dark:text-gray-400">
-                {(analysisResult.confidence * 100).toFixed(1)}%
-              </span>
+            )}
+
+            {/* Preview Area */}
+            {preview && (
+              <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-auto object-contain max-h-[400px]"
+                  onLoad={() => console.log('Image loaded in preview')} // Debug log
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('Clearing preview'); // Debug log
+                    setPreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-gray-900/70 rounded-full text-white hover:bg-gray-900/90 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Opening camera');
+                  setShowCamera(true);
+                }}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 dark:bg-medical-primary-600 dark:hover:bg-medical-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-medical-primary-500 transition-colors disabled:opacity-50"
+              >
+                <Camera className="w-5 h-5 mr-2" />
+                <span>Capture</span>
+              </button>
+              
+              {preview && (
+                <button
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={loading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-medical-primary-600 dark:hover:bg-medical-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-medical-primary-500 disabled:bg-indigo-400 dark:disabled:bg-medical-primary-400 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <Search className="w-5 h-5 mr-2" />
+                  )}
+                  <span>{loading ? 'Analyzing...' : 'Analyze'}</span>
+                </button>
+              )}
+
+              {preview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    console.log('Resetting form');
+                    handleReset();
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-medical-primary-500 transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
+          </div>
+
+          {/* Right Column - Analysis Results */}
+          {analysisResult && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Analysis Results</h3>
+              
+              <div className="mt-4 space-y-6">
+                {/* Risk Level and Confidence */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Risk Level</p>
+                    <p className={`mt-1 text-lg font-semibold ${
+                      analysisResult.risk === 'high' ? 'text-red-600 dark:text-red-400' :
+                      analysisResult.risk === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-green-600 dark:text-green-400'
+                    }`}>
+                      {analysisResult.risk.charAt(0).toUpperCase() + analysisResult.risk.slice(1)}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</p>
+                    <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                      {Math.round(analysisResult.confidence * 100)}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Analysis Summary */}
+                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Analysis Summary</p>
+                  <div className="mt-2 text-gray-700 dark:text-gray-300 space-y-4">
+                    {/* Visual Assessment */}
+                    {analysisResult.rawAnalysis && (
+                      <>
+                        <div>
+                          <h4 className="font-medium mb-2">Visual Assessment</h4>
+                          <ul className="list-disc list-inside space-y-1">
+                            {JSON.parse(analysisResult.rawAnalysis).visual_assessment?.objective_findings?.map((finding: string, index: number) => (
+                              <li key={index}>{finding}</li>
+                            )) || <li>No findings available</li>}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <h4 className="font-medium mb-2">Classification</h4>
+                          <p>Overall Appearance: {JSON.parse(analysisResult.rawAnalysis).classification?.overall_appearance || 'Not specified'}</p>
+                          <p>Risk Level: {JSON.parse(analysisResult.rawAnalysis).classification?.risk_level || 'Not specified'}</p>
+                          {JSON.parse(analysisResult.rawAnalysis).classification?.visual_evidence && (
+                            <div className="mt-2">
+                              <p className="font-medium">Visual Evidence:</p>
+                              <ul className="list-disc list-inside">
+                                {JSON.parse(analysisResult.rawAnalysis).classification.visual_evidence.map((evidence: string, index: number) => (
+                                  <li key={index}>{evidence}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recommendations */}
+                {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Recommendations</p>
+                    <ul className="list-disc list-inside space-y-2">
+                      {analysisResult.recommendations.map((recommendation, index) => (
+                        <li key={index} className="text-gray-700 dark:text-gray-300">
+                          {recommendation}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 max-w-2xl w-full mx-4">
+            <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />
           </div>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default PhotoUpload;

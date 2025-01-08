@@ -1,48 +1,85 @@
 import React, { useState } from 'react';
-import { FormInput } from './FormInput';
-import { useAuth } from '../../hooks/useAuth';
+import { motion } from 'framer-motion';
+import { Mail, Lock } from 'lucide-react';
 
-export function LoginForm() {
+type LoginFormProps = {
+  onSubmit: (email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  error?: string;
+};
+
+const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading, error }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { error, loading, signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
+    await onSubmit(email, password);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormInput
-        id="email"
-        label="Email"
-        type="email"
-        value={email}
-        onChange={setEmail}
-        required
-        disabled={loading}
-      />
-      <FormInput
-        id="password"
-        label="Password"
-        type="password"
-        value={password}
-        onChange={setPassword}
-        required
-        minLength={6}
-        disabled={loading}
-      />
+    <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 rounded-lg bg-red-100 text-red-700 text-sm"
+        >
+          {error}
+        </motion.div>
       )}
-      <button
+
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Email
+        </label>
+        <div className="mt-1 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Mail className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+            placeholder="you@example.com"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Password
+        </label>
+        <div className="mt-1 relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Lock className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+
+      <motion.button
         type="submit"
-        className="w-full bg-blue-600 text-white rounded-md py-2 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={loading}
+        disabled={isLoading}
+        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
       >
-        {loading ? 'Signing in...' : 'Sign In'}
-      </button>
+        {isLoading ? 'Signing in...' : 'Sign in'}
+      </motion.button>
     </form>
   );
-}
+};
+
+export default LoginForm;

@@ -22,8 +22,11 @@ export function FormInput({
   disabled = false,
 }: FormInputProps) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium dark:text-gray-200">
+    <div className="w-full">
+      <label 
+        htmlFor={id} 
+        className="block text-sm mb-1 text-gray-900 dark:text-gray-100"
+      >
         {label}
       </label>
       <input
@@ -31,7 +34,14 @@ export function FormInput({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`
+          w-full px-4 py-2.5 rounded-lg
+          bg-gray-50 dark:bg-gray-800
+          text-gray-900 dark:text-white
+          border border-gray-200 dark:border-gray-700
+          focus:outline-none focus:ring-2 focus:ring-blue-500
+          disabled:opacity-50 disabled:cursor-not-allowed
+        `}
         required={required}
         minLength={minLength}
         disabled={disabled}
