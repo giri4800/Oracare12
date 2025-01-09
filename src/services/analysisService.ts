@@ -1,5 +1,6 @@
 // Define interfaces
 import { HistopathologicalData, SUPPORTED_IMAGE_FORMATS } from '../utils/imageProcessing';
+import { API_CONFIG } from '../config/api';
 
 export interface AnalysisResponse {
   analysis?: string;
@@ -216,17 +217,6 @@ export async function analyzeImage(
       processedImage = compressedData;
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-    const anthropicKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
-    console.log('API URL:', apiUrl);
-    console.log('API Key exists:', !!anthropicKey);
-    console.log('Image data length:', processedImage.length);
-
-    if (!anthropicKey) {
-      throw new Error('Please add VITE_ANTHROPIC_API_KEY to your .env file');
-    }
-
     const prompt = `You are an expert oral pathologist analyzing an oral cavity image. 
 
 CRITICAL INSTRUCTION: Your primary duty is to avoid false positives and unnecessary anxiety. Start fresh with each image, ignoring risk factors until visual assessment is complete.
@@ -300,12 +290,12 @@ WARNING: Unless you see clear abnormalities, maintain LOW risk assessment. Do no
     console.log('Sending request with image data length:', processedImage.length);
     
     try {
-      console.log('Sending request to:', `${apiUrl}/api/analyze`);
-      const response = await fetch(`${apiUrl}/api/analyze`, {
+      console.log('Sending request to:', `${API_CONFIG.baseURL}/api/analyze`);
+      const response = await fetch(`${API_CONFIG.baseURL}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anthropicKey}`,
+          'Authorization': `Bearer ${API_CONFIG.apiKey}`,
         },
         body: JSON.stringify(requestBody),
       });

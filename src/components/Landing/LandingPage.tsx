@@ -194,7 +194,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
             >
-              so that you can focus on what really matters - <span className="text-cyan-600 dark:text-teal-400">to save life</span>
+              so that you can focus on what really matters - <span className="text-cyan-600 dark:text-teal-400">"To Save Life"</span>
             </motion.p>
 
             <motion.button
@@ -296,7 +296,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-gray-700 dark:text-gray-300 mb-8">
-                For individuals and small teams exploring the power of AI-driven oral health screening
+                For individuals and small teams exploring the power of oral health screening
               </p>
               <button className="w-full py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg font-medium mb-8 hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors" onClick={() => navigate('/auth?mode=signup')}>
                 Sign up

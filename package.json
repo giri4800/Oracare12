@@ -4,10 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server.ts",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "build": "tsc && vite build",
+    "lint": "eslint . --fix",
     "preview": "vite preview",
-    "start": "vite"
+    "security:audit": "npm audit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.33.1",
