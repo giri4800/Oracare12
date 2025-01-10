@@ -169,14 +169,12 @@ const HomePage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.2 }}
         >
-          <motion.h1 
-            className="text-7xl md:text-8xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 mb-8"
-            animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-            style={{ backgroundSize: "200% 200%" }}
+          <h1 
+            className="text-7xl md:text-8xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 mb-8" 
+            style={{ backgroundSize: '200% 200%', backgroundPosition: '66.64% 50%' }}
           >
-            H.O.P.E
-          </motion.h1>
+            ORA CARE
+          </h1>
           
           <motion.p
             className="text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-3xl mx-auto"
