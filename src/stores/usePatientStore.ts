@@ -34,6 +34,8 @@ interface PatientState {
   fetchPatients: () => Promise<void>;
   createPatient: (patientData: Omit<Patient, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => Promise<Patient | undefined>;
   getPatientById: (patientId: string) => Promise<Patient | undefined>;
+  updatePatient: (id: string, patientData: Partial<Patient>) => Promise<Patient | undefined>;
+  deletePatient: (id: string) => Promise<void>;
   clearMessages: () => void;
 }
 
@@ -163,6 +165,46 @@ export const usePatientStore = create<PatientState>((set, get) => ({
       console.error('Error fetching patient:', error);
       set({ error: error instanceof Error ? error.message : 'Failed to fetch patient' });
       return undefined;
+    }
+  },
+
+  updatePatient: async (id: string, patientData: Partial<Patient>) => {
+    set({ loading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .update(patientData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedPatients = get().patients.map(patient =>
+        patient.id === id ? { ...patient, ...data } : patient
+      );
+      set({ patients: updatedPatients, loading: false, success: 'Patient updated successfully' });
+      return data;
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+      return undefined;
+    }
+  },
+
+  deletePatient: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updatedPatients = get().patients.filter(patient => patient.id !== id);
+      set({ patients: updatedPatients, loading: false, success: 'Patient deleted successfully' });
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
     }
   },
 }));

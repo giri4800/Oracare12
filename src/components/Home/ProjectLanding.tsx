@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import PublicNav from '../Navigation/PublicNav';
+import LogoImage from '../Common/LogoImage';
 
 export default function ProjectLanding() {
   const navigate = useNavigate();
@@ -94,7 +95,13 @@ export default function ProjectLanding() {
                 <div className="relative bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm rounded-3xl p-8 h-full border border-gray-200 dark:border-gray-700/50 shadow-lg">
                   <div className="flex items-start justify-between mb-6">
                     <div>
-                      <div className="text-4xl mb-4">{product.icon}</div>
+                      <div className="text-4xl mb-4">
+                        {product.name === "OraCare" ? (
+                          <LogoImage type="oracare" className="h-12" />
+                        ) : (
+                          <span>{product.icon}</span>
+                        )}
+                      </div>
                       <h3 className={`text-3xl font-bold bg-gradient-to-r ${product.textGradient} bg-clip-text text-transparent mb-3`}>
                         {product.name}
                       </h3>

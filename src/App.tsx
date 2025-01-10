@@ -16,6 +16,7 @@ import ProjectLanding from './components/Home/ProjectLanding';
 import OraCareLanding from './components/Products/OraCareLanding';
 import LandingPage from './components/Landing/LandingPage';
 import { AnimatePresence, motion } from 'framer-motion';
+import LogoImage from './components/Common/LogoImage';
 
 const App: React.FC = () => {
   const { isDark } = useTheme();
@@ -25,18 +26,23 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   // Hide navigation on public pages
-  const isPublicPage = ['/auth', '/', '/products', '/oracare'].includes(location.pathname);
+  const isPublicPage = ['/', '/auth', '/products', '/oracare', '/landing'].includes(location.pathname);
 
-  // Prevent accessing authenticated routes after logout
+  // Only redirect to login if trying to access protected routes
   useEffect(() => {
-    if (!loading && !user && !isPublicPage) {
+    const isProtectedRoute = ['/home', '/analysis', '/history', '/add-patient', '/patient'].some(
+      route => location.pathname.startsWith(route)
+    );
+    
+    if (!loading && !user && isProtectedRoute) {
       navigate('/auth?mode=login', { replace: true });
     }
-  }, [user, loading, isPublicPage, navigate]);
+  }, [user, loading, navigate, location.pathname]);
 
   const handleLogout = async () => {
     try {
       await signOut();
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -59,9 +65,12 @@ const App: React.FC = () => {
             <div className="flex items-center justify-between h-full">
               <Link
                 to="/home"
-                className="text-xl font-bold text-white hover:text-medical-primary-400"
+                className="flex items-center space-x-3 text-xl font-bold text-white hover:text-medical-primary-400"
               >
-                ORA CARE
+                <div className="w-14 h-14 flex items-center justify-center">
+                  <LogoImage type="oracare" className="w-full h-full p-1" variant="nav" />
+                </div>
+                <span>ORA CARE</span>
               </Link>
 
               <div className="hidden md:flex items-center space-x-6">

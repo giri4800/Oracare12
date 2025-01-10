@@ -119,11 +119,7 @@ export default function LandingPage() {
   };
 
   const handleGetStarted = () => {
-    if (user) {
-      navigate('/home');
-    } else {
-      navigate('/auth?mode=signup');
-    }
+    navigate('/products');
   };
 
   return (
@@ -283,133 +279,183 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Starter Plan */}
             <motion.div
-              className="bg-blue-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300"
+              className="bg-blue-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300 flex flex-col h-full"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <h3 className="text-3xl font-bold text-blue-500 mb-4">Starter Plan</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="text-5xl font-bold text-gray-900 dark:text-white">0$</span>
-                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  Always free!
-                </span>
+              <div className="min-h-[200px] flex flex-col justify-between">
+                <h3 className="text-3xl font-bold text-blue-500 mb-4">Starter Plan</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-5xl font-bold text-gray-900 dark:text-white">0$</span>
+                  <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    Always free!
+                  </span>
+                </div>
+                <p className="text-gray-700 dark:text-gray-300">
+                  For individuals and small teams exploring the power of oral health screening
+                </p>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-8">
-                For individuals and small teams exploring the power of oral health screening
-              </p>
-              <button className="w-full py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg font-medium mb-8 hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors" onClick={() => navigate('/auth?mode=signup')}>
+
+              <button className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors mt-4 mb-8" onClick={() => navigate('/auth?mode=signup')}>
                 Sign up
               </button>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Basic oral health screening</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Up to 50 screenings/month</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Basic analytics dashboard</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Community support</span>
-                </li>
-              </ul>
+
+              <div className="flex-grow">
+                <ul className="space-y-4">
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Basic oral health screening</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Up to 50 screenings/month</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Basic analytics dashboard</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Community support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Basic patient records</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Email notifications</span>
+                  </li>
+                </ul>
+              </div>
             </motion.div>
 
             {/* Professional Plan */}
             <motion.div
-              className="bg-purple-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300"
+              className="bg-purple-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300 flex flex-col h-full relative transform scale-105 border-2 border-purple-500"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
             >
-              <h3 className="text-3xl font-bold text-purple-500 mb-4">Professional Plan</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="text-5xl font-bold text-gray-900 dark:text-white">0$</span>
-                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  Free during beta*
-                </span>
+              <div className="absolute -top-4 right-8 bg-purple-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                Most Popular
               </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-8">
-                For dental clinics and healthcare providers scaling their practice
-              </p>
-              <button className="w-full py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg font-medium mb-8 hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors" onClick={() => navigate('/auth?mode=signup')}>
+              <div className="min-h-[200px] flex flex-col justify-between">
+                <h3 className="text-3xl font-bold text-purple-500 mb-4">Professional Plan</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-5xl font-bold text-gray-900 dark:text-white">0$</span>
+                  <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    Free during beta*
+                  </span>
+                </div>
+                <p className="text-gray-700 dark:text-gray-300">
+                  For dental clinics and healthcare providers scaling their practice
+                </p>
+              </div>
+
+              <button className="w-full py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium transition-colors mt-4 mb-8" onClick={() => navigate('/auth?mode=signup')}>
                 Get started
               </button>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Everything in Starter +</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Unlimited screenings</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Advanced analytics & reporting</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Priority email support</span>
-                </li>
-              </ul>
-              <p className="mt-6 text-sm text-gray-700 dark:text-gray-300">
-                * Keep screening! It's free for now. We won't lock your data behind a paywall, and we'll offer a special deal for our beta users.
-              </p>
+
+              <div className="flex-grow">
+                <ul className="space-y-4">
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Everything in Starter +</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Unlimited screenings</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Advanced analytics & reporting</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Priority email support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Custom patient forms</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Team collaboration tools</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">API access</span>
+                  </li>
+                </ul>
+                <p className="mt-6 text-sm text-gray-700 dark:text-gray-300">
+                  * Keep screening! It's free for now. We won't lock your data behind a paywall, and we'll offer a special deal for our beta users.
+                </p>
+              </div>
             </motion.div>
 
             {/* Enterprise Plan */}
             <motion.div
-              className="bg-orange-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300"
+              className="bg-orange-50 dark:bg-gray-800 rounded-3xl p-8 hover:shadow-xl transition-shadow duration-300 flex flex-col h-full"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
             >
-              <h3 className="text-3xl font-bold text-orange-500 mb-4">Enterprise Plan</h3>
-              <div className="flex items-baseline mb-2">
-                <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  Coming soon
-                </span>
+              <div className="min-h-[200px] flex flex-col justify-between">
+                <h3 className="text-3xl font-bold text-orange-500 mb-4">Enterprise Plan</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    Coming soon
+                  </span>
+                </div>
+                <p className="text-gray-700 dark:text-gray-300">
+                  For large healthcare organizations with custom requirements
+                </p>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-8">
-                For large healthcare organizations with custom requirements
-              </p>
-              <button className="w-full py-3 bg-gray-900 dark:bg-gray-700 text-white rounded-lg font-medium mb-8 hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors" onClick={() => window.location.href = 'mailto:arkacreatos@gmail.com?subject=Enterprise Plan Inquiry'}>
+
+              <button className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors mt-4 mb-8" onClick={() => window.location.href = 'mailto:arkacreatos@gmail.com?subject=Enterprise Plan Inquiry'}>
                 Contact Us
               </button>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Everything in Professional +</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Custom integration options</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Advanced admin controls</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Dedicated support team</span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">Custom onboarding & training</span>
-                </li>
-              </ul>
-              <p className="mt-6 text-sm text-gray-700 dark:text-gray-300">
-                *Contact us for a customized quote
-              </p>
+
+              <div className="flex-grow">
+                <ul className="space-y-4">
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Everything in Professional +</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Custom integration options</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Advanced admin controls</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Dedicated support manager</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Custom model training</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">SLA guarantees</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">HIPAA compliance support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckCircle className="w-5 h-5 text-green-500 mt-1 mr-2" />
+                    <span className="text-gray-700 dark:text-gray-300">Multi-location support</span>
+                  </li>
+                </ul>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -592,7 +638,7 @@ export default function LandingPage() {
                   whileTap={{ scale: 0.9 }}
                 >
                   <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4.236l-8 4.882-8-4.882V6h16v2.236z" />
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
                   </svg>
                 </motion.a>
               </div>

@@ -1,79 +1,76 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import LogoImage from './LogoImage';
+import { useTheme } from '../../context/ThemeContext';
+import ThemeToggle from './ThemeToggle';
 
 interface NavItem {
   name: string;
   path: string;
-  matchPaths?: string[];
 }
 
 const navItems: NavItem[] = [
-  { 
-    name: 'Use Cases', 
-    path: '/use-cases',
-    matchPaths: ['/use-cases', '/use-cases/*']
+  {
+    name: 'Add Patient',
+    path: '/add-patient'
   },
-  { 
-    name: 'Pricing', 
-    path: '/pricing',
-    matchPaths: ['/pricing', '/pricing/*']
+  {
+    name: 'Analyze',
+    path: '/analysis'
   },
-  { 
-    name: 'About Us', 
-    path: '/about',
-    matchPaths: ['/about', '/about-us', '/about/*']
-  },
-  { 
-    name: 'Contact', 
-    path: '/contact',
-    matchPaths: ['/contact', '/contact/*']
+  {
+    name: 'Dashboard',
+    path: '/history'
   }
 ];
 
 const Navigation: React.FC = () => {
   const location = useLocation();
+  const { theme } = useTheme();
 
   const isActivePath = (item: NavItem) => {
     const currentPath = location.pathname.toLowerCase();
-    if (item.matchPaths) {
-      return item.matchPaths.some(path => 
-        currentPath === path.toLowerCase() || 
-        currentPath.startsWith(path.toLowerCase() + '/')
-      );
+    const itemPath = item.path.toLowerCase();
+    
+    if (itemPath === '/') {
+      return currentPath === itemPath;
     }
-    return currentPath === item.path.toLowerCase();
+    
+    return currentPath.startsWith(itemPath);
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-800">
+    <motion.nav 
+      className="fixed top-0 left-0 right-0 bg-[#0F172A] dark:bg-[#0F172A] backdrop-blur-md z-50"
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <img src="/logo.svg" alt="OraCare" className="h-8 w-8" />
-              <span className="text-xl font-semibold text-gray-900 dark:text-white">OraCare</span>
-            </Link>
+        <div className="flex justify-between h-12 items-center">
+          {/* Logo and Brand */}
+          <div className="flex-shrink-0 flex items-center space-x-2">
+            <LogoImage type="oracare" variant="nav" />
+            <span className="font-semibold tracking-wide text-white">
+              ORA CARE
+            </span>
           </div>
 
           {/* Navigation Items */}
           <div className="flex space-x-8">
-            {navItems.map((item) => {
-              const isActive = isActivePath(item);
-              
-              return (
+            {navItems.map((item) => (
+              <div key={item.name} className="relative">
                 <Link
-                  key={item.name}
                   to={item.path}
-                  className="relative inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 dark:text-white hover:text-medical-primary-600 dark:hover:text-medical-primary-400"
+                  className="relative inline-flex items-center px-1 pt-1 text-sm font-medium text-white hover:text-medical-primary-400 transition-colors duration-200"
                 >
                   <span className="relative py-2">
                     {item.name}
-                    {isActive && (
+                    {isActivePath(item) && (
                       <motion.div
-                        layoutId="navigation-indicator"
-                        className="absolute left-0 right-0"
+                        layoutId="nav-indicator"
+                        className="absolute -bottom-[3px] left-0 right-0"
                         initial={false}
                         transition={{
                           type: "spring",
@@ -82,42 +79,41 @@ const Navigation: React.FC = () => {
                         }}
                       >
                         <svg 
-                          className="absolute -bottom-1 w-full" 
-                          height="4" 
-                          viewBox="0 0 40 4" 
+                          className="absolute w-full" 
+                          height="8"
+                          viewBox="0 0 100 8"
+                          fill="none"
                           preserveAspectRatio="none"
                         >
-                          <path 
-                            d="M0 3C10 3 10 1 20 1C30 1 30 3 40 3" 
-                            stroke="#2563EB"
-                            strokeWidth="2" 
+                          <path
+                            d="M0,0 L45,0 Q50,0 50,4 Q50,8 55,8 L100,8"
+                            stroke="#3B82F6"
+                            strokeWidth="2"
                             fill="none"
+                            strokeLinecap="round"
                           />
                         </svg>
                       </motion.div>
                     )}
                   </span>
                 </Link>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-4">
-            <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-              <span className="sr-only">Toggle dark mode</span>
-              {/* Add your dark mode toggle icon here */}
-            </button>
+            <ThemeToggle />
             <Link
-              to="/products"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#2563EB] hover:bg-blue-600"
+              to="/logout"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
             >
-              View Products
+              Logout
             </Link>
           </div>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   );
 };
 

@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Logo from '../Common/Logo';
+import LogoImage from '../Common/LogoImage';
 import ThemeToggle from '../Common/ThemeToggle';
 import { useEffect, useState } from 'react';
 
@@ -74,7 +74,7 @@ export default function PublicNav() {
       transition={{ duration: 0.6 }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        <div className="flex justify-between h-20 items-center">
           <motion.div 
             className="flex items-center"
             initial={{ opacity: 0, x: -20 }}
@@ -85,7 +85,9 @@ export default function PublicNav() {
               onClick={handleLogoClick}
               className="hover:scale-105 transition-transform"
             >
-              <Logo />
+              <div className="w-16 h-16 flex items-center justify-center">
+                <LogoImage type="hope" className="w-full h-full p-1" />
+              </div>
             </button>
           </motion.div>
           

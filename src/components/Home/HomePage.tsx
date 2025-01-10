@@ -15,10 +15,11 @@ interface FeatureCardProps {
 }
 
 interface StatCardProps {
-  value: number;
+  value: number | string;
   label: string;
   icon: LucideIcon;
   delay?: number;
+  prefix?: string;
 }
 
 const ParallaxSection: React.FC<{ children: React.ReactNode; speed?: number }> = ({ children, speed = 0.5 }) => {
@@ -72,19 +73,13 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon: Icon, title, descriptio
   );
 };
 
-const StatCard: React.FC<StatCardProps> = ({ value, label, icon: Icon, delay = 0 }) => {
-  const [animatedValue, setAnimatedValue] = useState(0);
+const StatCard: React.FC<StatCardProps> = ({ value, label, icon: Icon, delay = 0, prefix = '' }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-20% 0px" });
-  const [isHovered, setIsHovered] = useState(false);
-
-  const { scale } = useSpring({
-    scale: isHovered ? 1.05 : 1,
-    config: config.wobbly
-  });
+  const [animatedValue, setAnimatedValue] = useState(0);
 
   useEffect(() => {
-    if (isInView) {
+    if (isInView && typeof value === 'number') {
       const duration = 2000;
       const steps = 60;
       const increment = value / steps;
@@ -102,37 +97,30 @@ const StatCard: React.FC<StatCardProps> = ({ value, label, icon: Icon, delay = 0
   }, [isInView, value]);
 
   return (
-    <animated.div
+    <motion.div
       ref={ref}
-      style={{ scale }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="p-8 rounded-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg shadow-lg"
+      className="bg-white dark:bg-[#1E293B] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-lg"
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.5, delay }}
     >
-      <motion.div 
-        className="flex items-center space-x-6"
-        animate={{ y: isHovered ? -5 : 0 }}
-        transition={{ type: "spring", stiffness: 300 }}
-      >
-        <motion.div 
-          className="p-4 rounded-2xl bg-blue-100 dark:bg-blue-900"
-          animate={{ rotate: isHovered ? 360 : 0 }}
-          transition={{ duration: 0.7 }}
-        >
-          <Icon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-        </motion.div>
-        <div>
-          <motion.div 
-            className="text-4xl font-bold text-gray-900 dark:text-white"
-            animate={{ scale: isHovered ? 1.1 : 1 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            {animatedValue}+
-          </motion.div>
-          <div className="text-lg text-gray-600 dark:text-gray-300">{label}</div>
+      <div className="flex items-center mb-4">
+        <div className="p-2 bg-blue-100 dark:bg-blue-500/10 rounded-lg">
+          <Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
         </div>
-      </motion.div>
-    </animated.div>
+      </div>
+      <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        {typeof value === 'number' ? (
+          <span>
+            {prefix}{animatedValue}
+            {!prefix && label === "Accuracy Rate" ? "%" : "+"}
+          </span>
+        ) : (
+          <span>{value}</span>
+        )}
+      </div>
+      <div className="text-gray-600 dark:text-gray-400">{label}</div>
+    </motion.div>
   );
 };
 
@@ -230,7 +218,7 @@ const HomePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <StatCard value={1000} label="Patients Screened" icon={Users} delay={0.1} />
               <StatCard value={95} label="Accuracy Rate" icon={Activity} delay={0.2} />
-              <StatCard value={24} label="Processing Time (sec)" icon={Clock} delay={0.3} />
+              <StatCard value=">25s" label="Processing Time" icon={Clock} delay={0.4} />
             </div>
           </div>
         </div>
