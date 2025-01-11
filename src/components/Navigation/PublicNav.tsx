@@ -68,7 +68,7 @@ export default function PublicNav() {
 
   return (
     <motion.nav 
-      className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-black/80 backdrop-blur-md z-50 border-b border-gray-200 dark:border-gray-800"
+      className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-green-100 backdrop-blur-md z-50 border-b border-gray-200 dark:border-gray-800"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6 }}
@@ -103,7 +103,7 @@ export default function PublicNav() {
                   <a 
                     href={`#${item.id}`}
                     onClick={(e) => handleNavClick(e, item.id)}
-                    className="text-gray-700 dark:text-gray-300 hover:text-medical-primary-600 transition-colors py-2"
+                    className="text-gray-700 dark:text-black hover:text-medical-primary-600 transition-colors py-2"
                   >
                     {item.label}
                   </a>
@@ -126,7 +126,7 @@ export default function PublicNav() {
                       >
                         <path 
                           d="M1 7C1 7 7 1 16 1C25 1 31 7 31 7"
-                          stroke="black"
+                          stroke="gray"
                           strokeWidth="2"
                           strokeLinecap="round"
                           fill="none"
