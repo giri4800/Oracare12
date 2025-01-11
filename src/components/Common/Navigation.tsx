@@ -42,7 +42,7 @@ const Navigation: React.FC = () => {
 
   return (
     <motion.nav 
-      className="fixed top-0 left-0 right-0 bg-[#0F172A] dark:bg-[#0F172A] backdrop-blur-md z-50"
+      className="fixed top-0 left-0 right-0 bg-white dark:bg-[#0F172A] backdrop-blur-md z-50 border-b border-gray-200 dark:border-gray-800"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6 }}
@@ -52,18 +52,22 @@ const Navigation: React.FC = () => {
           {/* Logo and Brand */}
           <div className="flex-shrink-0 flex items-center space-x-2">
             <LogoImage type="oracare" variant="nav" />
-            <span className="font-semibold tracking-wide text-white">
+            <span className="font-semibold tracking-wide text-gray-900 dark:text-white">
               ORA CARE
             </span>
           </div>
 
           {/* Navigation Items */}
-          <div className="flex space-x-8">
+          <div className="hidden sm:flex sm:space-x-8">
             {navItems.map((item) => (
               <div key={item.name} className="relative">
                 <Link
                   to={item.path}
-                  className="relative inline-flex items-center px-1 pt-1 text-sm font-medium text-white hover:text-medical-primary-400 transition-colors duration-200"
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium relative ${
+                    isActivePath(item)
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
                 >
                   <span className="relative py-2">
                     {item.name}

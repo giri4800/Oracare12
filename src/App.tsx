@@ -60,49 +60,50 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen transition-colors duration-200 bg-white dark:bg-gray-900">
       {user && !isPublicPage && (
-        <header className="fixed top-0 left-0 right-0 bg-gray-800 shadow-lg z-50">
-          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16">
+        <header className="fixed top-0 left-0 right-0 bg-white dark:bg-[#0F172A] shadow-lg z-50 border-b border-gray-200 dark:border-gray-800">
+          <nav className="max-w-7xl mx-auto bg-white dark:bg-[#0F172A] px-4 sm:px-6 lg:px-8 h-16">
             <div className="flex items-center justify-between h-full">
               <Link
                 to="/home"
-                className="flex items-center space-x-3 text-xl font-bold text-white hover:text-medical-primary-400"
+                className="flex items-center space-x-2"
               >
-                <div className="w-14 h-14 flex items-center justify-center">
-                  <LogoImage type="oracare" className="w-full h-full p-1" variant="nav" />
-                </div>
-                <span>ORA CARE</span>
+                <LogoImage type="oracare" variant="nav" />
+                <span className="text-lg font-semibold tracking-wide text-gray-900 dark:text-white">
+                  ORA CARE
+                </span>
               </Link>
 
-              <div className="hidden md:flex items-center space-x-6">
+              {/* Navigation Links */}
+              <div className="hidden md:flex items-center space-x-8">
                 <Link
                   to="/add-patient"
-                  className="flex items-center space-x-2 text-gray-200 hover:text-medical-primary-400"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
                 >
                   <Users className="w-5 h-5" />
                   <span>Add Patient</span>
                 </Link>
-
                 <Link
                   to="/analysis"
-                  className="flex items-center space-x-2 text-gray-200 hover:text-medical-primary-400"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
                 >
                   <Camera className="w-5 h-5" />
                   <span>Analyze</span>
                 </Link>
-
                 <Link
                   to="/history"
-                  className="flex items-center space-x-2 text-gray-200 hover:text-medical-primary-400"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
                 >
                   <Activity className="w-5 h-5" />
                   <span>Dashboard</span>
                 </Link>
+              </div>
 
+              {/* Right side items */}
+              <div className="flex items-center space-x-4">
                 <ThemeToggle />
-                
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 text-gray-200 hover:text-medical-primary-400"
+                  className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
                 >
                   <LogOut className="w-5 h-5" />
                   <span>Logout</span>
@@ -131,19 +132,22 @@ const App: React.FC = () => {
                       to="/add-patient"
                       className="block px-3 py-2 text-base font-medium text-gray-200 hover:text-medical-primary-400"
                     >
-                      Add Patient
+                      <Users className="w-5 h-5" />
+                      <span className="ml-2">Add Patient</span>
                     </Link>
                     <Link
                       to="/analysis"
                       className="block px-3 py-2 text-base font-medium text-gray-200 hover:text-medical-primary-400"
                     >
-                      Analyze
+                      <Camera className="w-5 h-5" />
+                      <span className="ml-2">Analyze</span>
                     </Link>
                     <Link
                       to="/history"
                       className="block px-3 py-2 text-base font-medium text-gray-200 hover:text-medical-primary-400"
                     >
-                      Dashboard
+                      <Activity className="w-5 h-5" />
+                      <span className="ml-2">History</span>
                     </Link>
                     <div className="px-3 py-2 flex justify-between items-center">
                       <ThemeToggle />
