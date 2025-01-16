@@ -25,6 +25,19 @@ const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const navigate = useNavigate();
 
+  // Handle ESC key press
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && user) {
+        event.preventDefault();
+        navigate(-1); // Go back to previous page
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [navigate, user]);
+
   // Hide navigation on public pages
   const isPublicPage = ['/', '/auth', '/products', '/oracare', '/landing'].includes(location.pathname);
 

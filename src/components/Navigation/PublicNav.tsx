@@ -68,10 +68,10 @@ export default function PublicNav() {
 
   return (
     <motion.nav 
-      className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-green-100 backdrop-blur-md z-50 border-b border-gray-200 dark:border-gray-800"
+      className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 backdrop-blur-md z-50 border-b border-gray-200 dark:border-gray-700"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20 items-center">
@@ -99,47 +99,30 @@ export default function PublicNav() {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               {navItems.map((item) => (
-                <div key={item.id} className="relative">
-                  <a 
-                    href={`#${item.id}`}
-                    onClick={(e) => handleNavClick(e, item.id)}
-                    className="text-gray-700 dark:text-black hover:text-medical-primary-600 transition-colors py-2"
-                  >
-                    {item.label}
-                  </a>
+                <motion.a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={(e) => handleNavClick(e, item.id)}
+                  className={`relative px-3 py-2 text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 ease-in-out ${
+                    activeSection === item.id ? 'font-semibold' : ''
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {item.label}
                   {activeSection === item.id && (
                     <motion.div
-                      layoutId="nav-indicator"
-                      className="absolute -bottom-2 left-0 right-0"
-                      initial={false}
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 30
-                      }}
-                    >
-                      <svg 
-                        className="absolute w-full -bottom-2" 
-                        height="8" 
-                        viewBox="0 0 32 8"
-                        preserveAspectRatio="none"
-                      >
-                        <path 
-                          d="M1 7C1 7 7 1 16 1C25 1 31 7 31 7"
-                          stroke="gray"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          fill="none"
-                        />
-                      </svg>
-                    </motion.div>
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-500"
+                      layoutId="navIndicator"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
                   )}
-                </div>
+                </motion.a>
               ))}
               <ThemeToggle />
               <button
                 onClick={() => navigate('/products')}
-                className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors"
               >
                 View Products
               </button>

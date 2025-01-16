@@ -15,18 +15,56 @@ export default function LandingPage() {
   const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8]);
 
   useEffect(() => {
-    // Handle navigation from other pages
+    // Redirect if user is already logged in
+    if (user) {
+      navigate('/home');
+      return;
+    }
+
+    // Handle navigation from other pages with improved timing
     if (location.state?.scrollTo) {
       const element = document.getElementById(location.state.scrollTo);
       if (element) {
         setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+          element.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 300); // Increased delay for better transition
       }
-      // Clear the state to prevent scrolling on subsequent renders
+      // Clear the state
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, user, navigate]);
+
+  // Smooth scroll handler for all internal links
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const href = e.currentTarget.getAttribute('href');
+    if (href?.startsWith('#')) {
+      e.preventDefault();
+      const targetId = href.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        staggerChildren: 0.1,
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }
+  };
 
   const pricingPlans = [
     {
@@ -89,16 +127,6 @@ export default function LandingPage() {
       gradient: "from-teal-500 to-emerald-500"
     }
   ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },

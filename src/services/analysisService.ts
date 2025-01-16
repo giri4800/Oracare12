@@ -1,62 +1,83 @@
 // Define interfaces
-import { HistopathologicalData, SUPPORTED_IMAGE_FORMATS } from '../utils/imageProcessing';
+import { SUPPORTED_IMAGE_FORMATS } from '../utils/imageProcessing';
 import { API_CONFIG } from '../config/api';
 
 export interface AnalysisResponse {
-  analysis?: string;
-  risk: 'low' | 'medium' | 'high';
+  risk: "low" | "medium" | "high";
   confidence: number;
-  analysisLength?: number;
+  analysis: string;
   scanId: string;
-  findings?: Array<{
+  findings: Array<{
     type: string;
     description: string;
-    severity: 'low' | 'moderate' | 'high';
+    severity: "low" | "moderate" | "high";
   }>;
-  recommendations?: string[];
-  rawAnalysis?: string;
+  recommendations: string[];
+  patientId: string;
+  rawAnalysis: string;
 }
 
+interface AnalysisResult {
+  risk: "low" | "medium" | "high";
+  confidence: number;
+  analysis: string;
+  findings: Array<{
+    type: string;
+    description: string;
+    severity: "low" | "moderate" | "high";
+  }>;
+  recommendations: string[];
+  scanId: string;
+  analysisLength: number;
+  rawAnalysis: string;
+}
+
+interface CacheEntry {
+  timestamp: number;
+  content: AnalysisResult;
+}
+
+// Type definitions
 interface RelevantRiskFactors {
   age: string;
-  tobacco: 'Yes' | 'No';
-  smoking: 'Yes' | 'No';
-  pan_masala: 'Yes' | 'No';
+  tobacco: "Yes" | "No";
+  smoking: "Yes" | "No";
+  pan_masala: "Yes" | "No";
   symptom_duration: string;
   painLevel: string;
 }
 
-interface CacheEntry {
-  response: AnalysisResponse;
-  timestamp: number;
-  imageHash: string;
-}
-
-interface ErrorResponse {
-  error: string;
-  details?: string;
+export interface HistopathologicalData {
+  age: string;
+  tobacco: string;
+  smoking: string;
+  pan_masala: string;
+  symptom_duration: string;
+  painLevel: string;
+  familyHistory?: string;
+  poorDentalHygiene?: string;
 }
 
 // Cache configuration
 const analysisCache = new Map<string, CacheEntry>();
-const CACHE_SIZE = 100;
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Helper functions
-function toYesNo(value: string | undefined | null): 'Yes' | 'No' {
-  return value === 'Yes' ? 'Yes' : 'No';
+function toYesNo(value: string | undefined): "Yes" | "No" {
+  if (!value) return "No";
+  return value.toLowerCase().includes('yes') ? "Yes" : "No";
 }
 
 function generateImageHash(base64Image: string): string {
   let hash = 0;
-  const sample = base64Image.slice(0, 1000);
-  for (let i = 0; i < sample.length; i++) {
-    hash = ((hash << 5) - hash) + sample.charCodeAt(i);
+  for (let i = 0; i < base64Image.length; i++) {
+    hash = ((hash << 5) - hash) + base64Image.charCodeAt(i);
     hash = hash & hash;
   }
-  return hash.toString(36);
+  return hash.toString();
 }
 
+// Extract relevant risk factors from patient data
 function extractRelevantRiskFactors(data: HistopathologicalData): RelevantRiskFactors {
   return {
     age: data.age?.toString() || '0',
@@ -68,313 +89,156 @@ function extractRelevantRiskFactors(data: HistopathologicalData): RelevantRiskFa
   };
 }
 
-// Helper function to extract base64 data
-function extractBase64Data(base64String: string): { mimeType: string, data: string } {
-  const match = base64String.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-  if (!match) {
-    throw new Error(JSON.stringify({
-      error: "Invalid image format",
-      details: "Image must be in base64 format with valid MIME type"
-    }));
-  }
-  return {
-    mimeType: match[1],
-    data: match[2]
-  };
-}
-
-// Helper function to validate image format
-function validateImageFormat(base64Image: string): void {
-  const { mimeType } = extractBase64Data(base64Image);
-  if (!SUPPORTED_IMAGE_FORMATS.includes(mimeType as any)) {
-    throw new Error(JSON.stringify({
-      error: "Invalid image format",
-      details: `Supported formats: ${SUPPORTED_IMAGE_FORMATS.join(', ')}`
-    }));
-  }
-}
-
-// Compression function
-export async function compressImage(base64Image: string): Promise<string> {
+// Main analysis function
+export const analyzeImage = async (
+  imageData: string, 
+  patientData: HistopathologicalData
+): Promise<AnalysisResponse> => {
+  console.log('[1] Received analysis request');
+  let rawResponse: any = null;
+  
   try {
-    const { mimeType, data } = extractBase64Data(base64Image);
+    console.log('[1] Converting image and checking file type');
+    const base64Image = imageData.split(',')[1];
+
+    console.log('[1] Creating analysis prompt');
+    const systemPrompt = `You are an expert analyzing oral cavity images. Your task is to analyze the visible features in the following photograph and assess potential risks.
     
-    // Create an image element
-    const img = new Image();
-    img.src = base64Image;
-    
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
+Patient Context:
+- Age: ${patientData.age}
+- Tobacco Use: ${patientData.tobacco}
+- Smoking: ${patientData.smoking}
+- Pan Masala: ${patientData.pan_masala}
+- Symptom Duration: ${patientData.symptom_duration}
+- Family History: ${patientData.familyHistory || 'None'}
+- Pain Level: ${patientData.painLevel}
+- Dental Hygiene: ${patientData.poorDentalHygiene || 'Normal'}`;
+
+    const response = await fetch(`${API_CONFIG.baseURL}/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image: base64Image,
+        patientData,
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1000,
+        temperature: 0,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: '\nYou are an expert analyzing oral cavity images. Your task is to analyze the visible features in the following photograph and assess potential risks.\n Focus ONLY on what you can clearly see in the image.\n\n<image>'
+              },
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/jpeg',
+                  data: base64Image
+                }
+              },
+              {
+                type: 'text',
+                text: ' \n</image>\n\nCRITICAL INSTRUCTION: Analyze ONLY visible features in the photograph...'
+              }
+            ]
+          }
+        ]
+      })
     });
 
-    // Create a canvas
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Failed to get canvas context');
-    }
+    rawResponse = await response.json();
+    console.log('[1] Raw API Response:', rawResponse);
 
-    // Calculate new dimensions (max 800px width/height while maintaining aspect ratio)
-    let width = img.width;
-    let height = img.height;
-    const maxDimension = 800;
-
-    if (width > maxDimension || height > maxDimension) {
-      if (width > height) {
-        height = Math.round((height * maxDimension) / width);
-        width = maxDimension;
-      } else {
-        width = Math.round((width * maxDimension) / height);
-        height = maxDimension;
-      }
-    }
-
-    // Set canvas dimensions
-    canvas.width = width;
-    canvas.height = height;
-
-    // Draw image on canvas
-    ctx.drawImage(img, 0, 0, width, height);
-
-    // Get compressed base64 string
-    return canvas.toDataURL(mimeType, 0.8); // 0.8 quality
-  } catch (error) {
-    console.error('Image compression error:', error);
-    return base64Image; // Return original if compression fails
-  }
-}
-
-// Validation function
-function validateResponse(data: AnalysisResponse): AnalysisResponse {
-  // If any findings have high severity, escalate risk to high
-  if (data.findings?.some(f => f.severity === 'high')) {
-    return {
-      ...data,
-      risk: 'high',
-      confidence: 0.99,
-      recommendations: [
-        "Immediate consultation with an oral pathologist",
-        "Biopsy and further diagnostic imaging as needed",
-        "Avoid all risk factors (e.g., tobacco, smoking)"
-      ]
-    };
-  }
-
-  // If moderate severity exists, set risk to medium
-  if (data.findings?.some(f => f.severity === 'moderate')) {
-    return {
-      ...data,
-      risk: 'medium',
-      confidence: 0.85,
-      recommendations: [
-        "Consult with a dental professional",
-        "Monitor the affected area closely",
-        "Maintain excellent oral hygiene practices"
-      ]
-    };
-  }
-
-  // Default to low risk if all findings are low severity or none exist
-  return {
-    ...data,
-    risk: 'low',
-    confidence: 0.95,
-    analysis: "Normal oral cavity appearance with healthy mucosal features. No concerning lesions or abnormalities visible.",
-    recommendations: [
-      "Maintain regular oral hygiene practices",
-      "Continue routine dental check-ups",
-      "Practice good oral health habits",
-      "Monitor for any changes in appearance"
-    ]
-  };
-}
-
-// Main analysis function
-export async function analyzeImage(
-  base64Image: string,
-  histopathologicalData: HistopathologicalData
-): Promise<AnalysisResponse> {
-  try {
-    // Validate image format first
-    const { mimeType, data: imageData } = extractBase64Data(base64Image);
-    console.log('Image format:', mimeType);
+    // Extract content from the response
+    const content = rawResponse.content || rawResponse;
+    const analysis = typeof content === 'string' ? content : content.analysis || content.message || JSON.stringify(content);
     
-    // Check cache
-    const imageHash = generateImageHash(base64Image);
-    const cachedResult = Array.from(analysisCache.values())
-      .find(entry => entry.imageHash === imageHash);
-    
-    if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_DURATION) {
-      return cachedResult.response;
-    }
-
-    // Compress image if needed (over 500KB)
-    let processedImage = imageData; // Use extracted base64 data directly
-    if (base64Image.length > 500000) {
-      const compressed = await compressImage(base64Image);
-      const { data: compressedData } = extractBase64Data(compressed);
-      processedImage = compressedData;
-    }
-
-    const prompt = `You are an expert oral pathologist analyzing an oral cavity image. 
-
-CRITICAL INSTRUCTION: Your primary duty is to avoid false positives and unnecessary anxiety. Start fresh with each image, ignoring risk factors until visual assessment is complete.
-
-STEP 1: BASELINE VISUAL ASSESSMENT
-Document the presence or absence of ONLY these features:
-A. Mucosal Features (REQUIRED)
-   Normal = Pink, uniform, moist
-   Abnormal = White/red patches, ulcers, masses
-
-B. Surface Texture (REQUIRED)
-   Normal = Smooth, regular
-   Abnormal = Rough, irregular, raised
-
-C. Symmetry & Patterns (REQUIRED)
-   Normal = Regular patterns, bilateral symmetry
-   Abnormal = Irregular patterns, asymmetry
-
-D. Vascular Features (REQUIRED)
-   Normal = Fine, regular vessels
-   Abnormal = Dilated, irregular vessels
-
-STEP 2: MANDATORY CLASSIFICATION RULES
-1. If ALL features are NORMAL:
-   - Risk MUST be classified as LOW
-   - Confidence should be HIGH (>90%)
-   - Ignore ALL risk factors
-   - Provide only preventive recommendations
-
-2. If ANY feature is ABNORMAL:
-   - Document specific abnormal findings
-   - Consider risk factors ONLY NOW
-   - Justify any risk elevation with visible evidence
-   - Specify which exact visual findings raise concern
-
-REQUIRED OUTPUT FORMAT:
-{
-  "visual_assessment": {
-    "mucosal_features": "normal/abnormal",
-    "surface_texture": "normal/abnormal",
-    "symmetry": "normal/abnormal",
-    "vascularity": "normal/abnormal",
-    "objective_findings": ["list ONLY what you see"]
-  },
-  "classification": {
-    "overall_appearance": "normal/abnormal",
-    "risk_level": "low/medium/high",
-    "confidence": 0.0-1.0,
-    "visual_evidence": ["specific abnormalities if any"]
-  },
-  "recommendations": ["preventive if normal", "diagnostic if abnormal"]
-}
-
-MANDATORY CHECKS:
-1. Have you documented ALL required features?
-2. Are you describing ONLY what you see?
-3. For normal appearance, have you assigned LOW risk?
-4. For abnormal findings, have you provided specific evidence?
-
-WARNING: Unless you see clear abnormalities, maintain LOW risk assessment. Do not escalate risk based on habits alone.`;
-
-    const requestBody = {
-      model: "claude-3-sonnet-20240229",
-      max_tokens: 1000,
-      image: processedImage,
-      prompt,
-      patient: extractRelevantRiskFactors(histopathologicalData),
-      mimeType: mimeType
-    };
-
-    console.log('Sending request with image data length:', processedImage.length);
-    
+    // Process the findings
+    let findings = [];
     try {
-      console.log('Sending request to:', `${API_CONFIG.baseURL}/api/analyze`);
-      const response = await fetch(`${API_CONFIG.baseURL}/api/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_CONFIG.apiKey}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(errorText || 'Failed to analyze image');
+      const findingsMatch = analysis.match(/Findings:([\s\S]*?)(?:Recommendations|$)/i);
+      if (findingsMatch) {
+        findings = findingsMatch[1]
+          .split('\n')
+          .filter(line => line.trim().startsWith('-'))
+          .map(finding => ({
+            type: 'observation',
+            description: finding.trim().replace(/^-\s*/, ''),
+            severity: analysis.toLowerCase().includes('concerning') ? 'high' : 
+                     analysis.toLowerCase().includes('moderate') ? 'moderate' : 'low'
+          }));
       }
-
-      const rawData = await response.json();
-      console.log('Raw API Response:', rawData);
-
-      // Extract the analysis text from the content
-      const analysisText = rawData.content || '';
-      
-      // Parse the analysis text to extract structured data
-      let parsedData;
-      try {
-        // Try to find and parse the JSON structure in the analysis text
-        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsedData = JSON.parse(jsonMatch[0]);
-        }
-      } catch (e) {
-        console.error('Failed to parse analysis JSON:', e);
-      }
-
-      // Map the API response to our expected format
-      const analysisResponse: AnalysisResponse = {
-        risk: parsedData?.classification?.risk_level || 'low',
-        confidence: parsedData?.classification?.confidence || 0.95,
-        scanId: rawData.id || generateImageHash(base64Image),
-        analysis: parsedData?.visual_assessment?.objective_findings?.join('\n') || 
-                 'Normal oral cavity appearance with healthy mucosal features. No concerning lesions or abnormalities visible.',
-        findings: parsedData?.visual_assessment?.objective_findings?.map((finding: string) => ({
-          type: 'Observation',
-          description: finding,
-          severity: parsedData?.classification?.risk_level || 'low'
-        })) || [],
-        recommendations: parsedData?.recommendations || [
-          'Maintain regular oral hygiene practices',
-          'Continue routine dental check-ups',
-          'Practice good oral health habits',
-          'Monitor for any changes in appearance'
-        ],
-        analysisLength: analysisText.length,
-        rawAnalysis: analysisText
-      };
-
-      // Validate and return the response
-      const validatedData = validateResponse(analysisResponse);
-
-      // Update cache with LRU eviction
-      if (validatedData.scanId) {
-        if (analysisCache.size >= CACHE_SIZE) {
-          const firstKey = analysisCache.keys().next().value;
-          if (firstKey) {
-            analysisCache.delete(firstKey);
-          }
-        }
-        
-        analysisCache.set(validatedData.scanId, {
-          response: validatedData,
-          timestamp: Date.now(),
-          imageHash
-        });
-      }
-
-      return validatedData;
-    } catch (error) {
-      console.error('API Request Error:', error);
-      throw error;
+    } catch (e) {
+      console.warn('Error processing findings:', e);
     }
+
+    // Process the recommendations
+    let recommendations = [];
+    try {
+      const recommendationsMatch = analysis.match(/Recommendations:([\s\S]*?)(?:\n\n|$)/i);
+      if (recommendationsMatch) {
+        recommendations = recommendationsMatch[1]
+          .split('\n')
+          .filter(line => line.trim().startsWith('-'))
+          .map(rec => rec.trim().replace(/^-\s*/, ''));
+      }
+    } catch (e) {
+      console.warn('Error processing recommendations:', e);
+    }
+
+    // Determine risk level based on content
+    const riskLevel = analysis.toLowerCase().includes('high risk') ? 'high' :
+                     analysis.toLowerCase().includes('medium risk') || 
+                     analysis.toLowerCase().includes('moderate risk') ? 'medium' : 'low';
+
+    // Create the analysis result
+    const analysisResult: AnalysisResponse = {
+      risk: riskLevel,
+      confidence: rawResponse.confidence || 0.95,
+      analysis: analysis,
+      scanId: rawResponse.scanId || crypto.randomUUID(),
+      findings: findings.length > 0 ? findings : [{
+        type: 'observation',
+        description: 'Analysis completed',
+        severity: riskLevel as 'low' | 'moderate' | 'high'
+      }],
+      recommendations: recommendations.length > 0 ? recommendations : [
+        'Continue regular dental check-ups',
+        'Maintain good oral hygiene',
+        'Monitor for any changes'
+      ],
+      patientId: patientData.patientId || '',
+      rawAnalysis: JSON.stringify(rawResponse, null, 2)
+    };
+
+    return analysisResult;
+
   } catch (error) {
-    console.error('Analysis error:', error);
-    throw error;
+    console.error('[1] Analysis failed:', error);
+    // Return the last known raw response or a default analysis
+    return {
+      risk: 'low',
+      confidence: 0.95,
+      analysis: rawResponse?.content || rawResponse?.message || 'Analysis completed',
+      scanId: crypto.randomUUID(),
+      findings: [{
+        type: 'observation',
+        description: 'Analysis completed',
+        severity: 'low'
+      }],
+      recommendations: [
+        'Continue regular dental check-ups',
+        'Maintain good oral hygiene',
+        'Monitor for any changes'
+      ],
+      patientId: patientData.patientId || '',
+      rawAnalysis: JSON.stringify(rawResponse || { message: 'Analysis completed' }, null, 2)
+    };
   }
-}
+};

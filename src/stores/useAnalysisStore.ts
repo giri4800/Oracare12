@@ -11,8 +11,6 @@ interface DBAnalysis {
   result: Json;
   status: string;
   created_at: string;
-  patient_id: string;
-  scan_id: string;
 }
 
 // Define the frontend analysis type
@@ -30,9 +28,9 @@ interface Analysis {
 interface AnalysisStore {
   analyses: Analysis[];
   loading: boolean;
-  error: string | null;
-  createAnalysis: (analysis: Partial<Analysis>) => Promise<void>;
-  fetchAnalyses: (userId: string, patientId?: string) => Promise<void>;
+  error: Error | null;
+  createAnalysis: (analysis: Partial<Analysis> & { patientId: string }) => Promise<void>;
+  fetchAnalyses: () => Promise<void>;
   getAnalysisByPatientId: (patientId: string) => Analysis | undefined;
   getAnalysisByScanId: (scanId: string) => Analysis | undefined;
   clearError: () => void;
@@ -41,19 +39,18 @@ interface AnalysisStore {
 // Convert DB analysis to frontend analysis
 function convertDBAnalysisToAnalysis(dbAnalysis: DBAnalysis): Analysis {
   console.log('Converting DB analysis:', dbAnalysis);
-  const result = dbAnalysis.result as unknown as AnalysisResponse;
-  const analysis = {
+  const result = dbAnalysis.result as AnalysisResponse;
+  
+  return {
     id: dbAnalysis.id,
     user_id: dbAnalysis.user_id,
     image_url: dbAnalysis.image_url,
     result: result,
     status: dbAnalysis.status,
     created_at: dbAnalysis.created_at,
-    patientId: dbAnalysis.patient_id,
-    scanId: dbAnalysis.scan_id
+    patientId: result.patientId || '',
+    scanId: result.scanId || ''
   };
-  console.log('Converted to frontend analysis:', analysis);
-  return analysis;
 }
 
 export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
@@ -61,27 +58,34 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
   loading: false,
   error: null,
 
-  createAnalysis: async (analysis: Partial<Analysis>) => {
+  createAnalysis: async (analysis: Partial<Analysis> & { patientId: string }) => {
     try {
       set({ loading: true, error: null });
       
       // Generate unique IDs if not provided
+      const scanId = analysis.scanId || crypto.randomUUID();
       const newAnalysis: Analysis = {
         id: analysis.id || crypto.randomUUID(),
         user_id: analysis.user_id || 'default_user',
         image_url: analysis.image_url || '',
-        result: analysis.result || {} as AnalysisResponse,
+        result: {
+          ...(analysis.result || {}),
+          patientId: analysis.patientId,
+          scanId
+        } as AnalysisResponse,
         status: analysis.status || 'completed',
         created_at: analysis.created_at || new Date().toISOString(),
-        patientId: analysis.patientId || '',
-        scanId: analysis.scanId || crypto.randomUUID()
+        patientId: analysis.patientId,
+        scanId
       };
 
       console.log('Creating analysis with data:', {
         id: newAnalysis.id,
         user_id: newAnalysis.user_id,
         patient_id: newAnalysis.patientId,
-        scan_id: newAnalysis.scanId
+        scan_id: newAnalysis.scanId,
+        risk: newAnalysis.result.risk,
+        confidence: newAnalysis.result.confidence
       });
 
       // Insert into Supabase
@@ -91,11 +95,18 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
           id: newAnalysis.id,
           user_id: newAnalysis.user_id,
           image_url: newAnalysis.image_url,
-          result: newAnalysis.result,
+          result: {
+            ...newAnalysis.result,
+            patientId: newAnalysis.patientId,
+            scanId: newAnalysis.scanId,
+            analysis: newAnalysis.result.analysis,
+            risk: newAnalysis.result.risk,
+            confidence: newAnalysis.result.confidence,
+            findings: newAnalysis.result.findings,
+            recommendations: newAnalysis.result.recommendations
+          },
           status: newAnalysis.status,
-          created_at: newAnalysis.created_at,
-          patient_id: newAnalysis.patientId, // Store as patient_id in DB
-          scan_id: newAnalysis.scanId
+          created_at: newAnalysis.created_at
         })
         .select()
         .single();
@@ -107,27 +118,24 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
 
       // Update the local state with the new analysis
       const analyses = get().analyses;
-      const convertedAnalysis = convertDBAnalysisToAnalysis(data);
-      console.log('Converted analysis for state:', convertedAnalysis);
-      set({ analyses: [...analyses, convertedAnalysis] });
+      set({ analyses: [...analyses, newAnalysis] });
       
     } catch (error: any) {
       console.error('Error creating analysis:', error);
-      set({ error: error.message });
+      set({ error });
       throw error;
     } finally {
       set({ loading: false });
     }
   },
 
-  fetchAnalyses: async (userId: string, patientId?: string) => {
+  fetchAnalyses: async () => {
     set({ loading: true, error: null });
     try {
-      console.log('Fetching analyses for user:', userId);
+      console.log('Fetching analyses');
       const { data, error } = await supabase
         .from('analyses')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -140,7 +148,7 @@ export const useAnalysisStore = create<AnalysisStore>((set, get) => ({
       set({ analyses });
     } catch (error: any) {
       console.error('Error in fetchAnalyses:', error);
-      set({ error: error.message });
+      set({ error });
     } finally {
       set({ loading: false });
     }

@@ -64,22 +64,19 @@ const PhotoUpload = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!preview || !patientId) {
-      setError('Please upload an image and enter a patient ID');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+    if (!preview || !patientId) return;
 
     try {
-      // Get patient data
+      setLoading(true);
+      setError(null);
+
+      // Get patient details first
       const patient = await getPatientById(patientId);
       if (!patient) {
         throw new Error('Patient not found');
       }
 
-      console.log('Found patient:', patient); // Add debug log
+      console.log('Found patient:', patient);
 
       // Convert patient data to histopathological data
       const histopathologicalData: HistopathologicalData = {
@@ -101,41 +98,23 @@ const PhotoUpload = () => {
         poorDentalHygiene: patient.poor_dental_hygiene || 'No'
       };
 
-      // Analyze image
+      // Analyze the image
       const result = await analyzeImage(preview, histopathologicalData);
       console.log('Analysis result:', result);
 
-      // Store analysis result
-      try {
-        const analysisToSave = {
-          patientId: patient.patient_id, // Ensure we're using patient_id
-          user_id: patient.user_id, // Add user_id from patient
-          image_url: preview,
-          result: {
-            risk: result.risk || 'low',
-            confidence: result.confidence || 0.95,
-            analysis: result.analysis || 'Analysis completed successfully',
-            findings: Array.isArray(result.findings) ? result.findings : [],
-            recommendations: Array.isArray(result.recommendations) ? result.recommendations : [
-              'Maintain regular oral hygiene practices',
-              'Continue routine dental check-ups'
-            ],
-            scanId: result.scanId || crypto.randomUUID(),
-            analysisLength: result.analysisLength || 0,
-            rawAnalysis: result.rawAnalysis || ''
-          },
-          status: 'completed',
-          created_at: new Date().toISOString()
-        };
+      // Save the analysis
+      console.log('Saving analysis with patient ID:', patientId);
+      await createAnalysis({
+        patientId,
+        image_url: preview,
+        result: {
+          ...result,
+          patientId,
+          scanId: result.scanId
+        }
+      });
 
-        console.log('Saving analysis with patient ID:', analysisToSave.patientId); // Add debug log
-        await createAnalysis(analysisToSave);
-        console.log('Analysis saved successfully');
-      } catch (saveError) {
-        console.error('Failed to save analysis:', saveError);
-        throw saveError;
-      }
-
+      console.log('Analysis saved successfully');
       setAnalysisResult(result);
       
     } catch (err) {
